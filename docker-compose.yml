@@ -1,0 +1,53 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: backend/
+    ports:
+      - 3000:3000
+    env_file:
+      - .env
+    networks:
+      - urlshortener
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    container_name: frontend
+    build:
+      context: frontend/
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    ports:
+      - 80:80
+    networks:
+      - urlshortener
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql
+    networks:
+      - urlshortener
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 80s
+
+networks:
+  urlshortener:
+
+volumes:
+  db_data:
+    driver: local
